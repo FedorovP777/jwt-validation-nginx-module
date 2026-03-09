@@ -1,12 +1,6 @@
-master_process off;
-daemon off;
+Example config
 
-error_log  /dev/stderr  debug;
-
-events {
-    worker_connections  1024;
-}
-
+```
 http {
 
     access_log /dev/stdout;
@@ -23,3 +17,4 @@ http {
         }
     }
 }
+```

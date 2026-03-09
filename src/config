@@ -1,0 +1,5 @@
+ngx_module_type=HTTP
+ngx_module_name=ngx_jwt_validation
+ngx_module_srcs="$ngx_addon_dir/ngx_jwt_validation.c"
+. auto/module
+ngx_addon_name=$ngx_module_name
