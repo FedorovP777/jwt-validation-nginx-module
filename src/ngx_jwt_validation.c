@@ -4,15 +4,12 @@
 #include <openssl/hmac.h>
 
 typedef struct {
-    ngx_int_t status;
+    ngx_flag_t jwt_validation_enable;
     ngx_http_complex_value_t *token;
     ngx_http_complex_value_t *token_second;
     ngx_str_t jwt_token_secret;
 } ngx_http_jwt_validation_loc_conf_t;
 
-
-static char *
-ngx_http_jwt_validator(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
 
 static void *
 ngx_http_jwt_validator_create_loc_conf(ngx_conf_t *cf);
@@ -23,8 +20,12 @@ ngx_http_jwt_access_handler(ngx_http_request_t *r);
 static ngx_command_t ngx_jwt_validation_commands[] = {
 
     {
-        ngx_string("jwt_validator"), NGX_HTTP_LOC_CONF | NGX_CONF_NOARGS,
-        ngx_http_jwt_validator, 0, 0, NULL
+        ngx_string("jwt_validation_enable"),
+        NGX_HTTP_MAIN_CONF | NGX_HTTP_LOC_CONF | NGX_CONF_FLAG,
+        ngx_conf_set_flag_slot,
+        NGX_HTTP_LOC_CONF_OFFSET,
+        offsetof(ngx_http_jwt_validation_loc_conf_t, jwt_validation_enable),
+        NULL
     },
     {
         ngx_string("jwt_token_param"),
@@ -98,11 +99,6 @@ ngx_module_t ngx_jwt_validation = {
     NGX_MODULE_V1_PADDING
 };
 
-static char *
-ngx_http_jwt_validator(ngx_conf_t *cf, ngx_command_t *cmd, void *conf) {
-    return NGX_CONF_OK;
-}
-
 static void *
 ngx_http_jwt_validator_create_loc_conf(ngx_conf_t *cf) {
     ngx_http_jwt_validation_loc_conf_t *conf;
@@ -112,7 +108,7 @@ ngx_http_jwt_validator_create_loc_conf(ngx_conf_t *cf) {
         return NULL;
     }
 
-    conf->status = NGX_CONF_UNSET;
+    conf->jwt_validation_enable = NGX_CONF_UNSET;
 
     return conf;
 }
@@ -155,9 +151,9 @@ static const char *jwt_prefix = "Bearer ";
 static ngx_int_t
 ngx_http_jwt_access_handler(ngx_http_request_t *r) {
     ngx_http_jwt_validation_loc_conf_t *hlcf = ngx_http_get_module_loc_conf(r, ngx_jwt_validation);
-    if (hlcf == NULL) {
-        ngx_log_error(NGX_LOG_ALERT, r->connection->log, 0, "Get config error");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+
+    if (hlcf == NULL || hlcf->jwt_validation_enable == NGX_CONF_UNSET) {
+        return NGX_DECLINED;
     }
 
     ngx_str_t jwt_token = {.len = 0, .data = NULL};
